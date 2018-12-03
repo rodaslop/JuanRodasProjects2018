@@ -1,0 +1,342 @@
+using System;
+using System.Windows.Forms;
+using System.Data.SqlClient;
+using System.Text.RegularExpressions;
+
+namespace MovieDatabase
+{
+    public partial class Form1 : Form
+    {
+        SqlConnection conn;
+        SqlCommand cmd;
+        BindingSource bindSrc;
+        SqlDataReader reader;
+        string errorMsg;
+
+        public Form1()
+        {
+            InitializeComponent();
+            conn = new SqlConnection();
+            conn.ConnectionString = @"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=movies;
+                                      Integrated Security=True;Connect Timeout=30;Encrypt=False;
+                                      TrustServerCertificate=True;ApplicationIntent=ReadWrite;MultiSubnetFailover=False";
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            try
+            {
+                cmd = new SqlCommand("SELECT * FROM movie", conn);
+                conn.Open();
+                reader = cmd.ExecuteReader();
+                bindSrc = new BindingSource();
+                bindSrc.DataSource = reader;
+                Dgv_movies.DataSource = bindSrc;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+            finally
+            {
+                reader.Close();
+                conn.Close();
+            }
+            ComboBox_genre.SelectedIndex = 0;
+        }
+
+        /* ==================================== Form validation events ============================================*/
+
+        private void Txt_isbn_Validating(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            if (Txt_isbn.Text.Length == 0)
+            {
+                e.Cancel = true;
+                errorMsg = "Field is required";
+                this.errorProvider1.SetError(Txt_isbn, errorMsg);
+            }
+        }
+
+        private void Txt_isbn_Validated(object sender, EventArgs e)
+        {
+            this.errorProvider1.SetError(Txt_isbn, "");
+        }
+
+        private void Txt_name_Validating(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            if (Txt_name.Text.Length == 0)
+            {
+                e.Cancel = true;
+                errorMsg = "Field is required";
+                this.errorProvider1.SetError(Txt_name, errorMsg);
+            }
+            if (!(Txt_name.Text.Length <= 50))   //character count must me 50 or less
+            {
+                e.Cancel = true;
+                errorMsg = "Name must be 50 characters or less";
+                Txt_name.Select(0, Txt_name.Text.Length);
+                this.errorProvider1.SetError(Txt_name, errorMsg);
+            }
+        }
+
+
+        private void Txt_name_Validated(object sender, EventArgs e)
+        {
+            this.errorProvider1.SetError(Txt_name, "");
+        }
+
+        private void Txt_duration_Validating(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            if (Txt_duration.Text.Length == 0)
+            {
+                Txt_duration.Text = "0";
+            }
+        }
+
+        private void Txt_price_Validating(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            if (Txt_price.Text.Length == 0)
+            {
+                Txt_price.Text = "0";
+            }
+            else
+            {
+                Regex regex = new Regex(@"^\d+(,\d{3})*(\.\d{1,2})?$");
+                Match match = regex.Match(Txt_price.Text);
+                if (!match.Success)
+                {
+                    e.Cancel = true;
+                    errorMsg = "Price must be in format $000 or $000.00";
+                    this.errorProvider1.SetError(Txt_price, errorMsg);
+                }
+            }
+        }
+
+        private void Txt_price_Validated(object sender, EventArgs e)
+        {
+            this.errorProvider1.SetError(Txt_price, "");
+        }
+
+        /* ==================================== End of Form validation events ============================================*/
+
+        //method to place the cursor at the end of the string
+        private void Txt_duration_Click(object sender, EventArgs e)
+        {
+            Txt_duration.SelectionStart = Txt_duration.Text.Length;
+        }
+
+        // method to return the movie star rating
+        private object getStarRating()
+        {
+            CheckBox[] checkBoxes = { CheckBox1, CheckBox2, CheckBox3, CheckBox4, CheckBox5 };
+            for (int i = checkBoxes.Length - 1; i >= 0; i--)
+            {
+                if (checkBoxes[i].Checked)
+                    return i + 1;
+            }
+            return 1;
+        }
+
+        //method to set the movie star rating
+        private void SetStarRating(int position)
+        {
+            CheckBox[] checkBoxes = { CheckBox1, CheckBox2, CheckBox3, CheckBox4, CheckBox5 };
+            for (int i = 0; i < position; i++)
+            {
+                checkBoxes[i].Checked = true;
+            }
+
+            for (int i = position; i < checkBoxes.Length; i++)
+            {
+                checkBoxes[i].Checked = false;
+            }
+        }
+
+        private void CheckBox1_Click(object sender, EventArgs e)
+        {
+            SetStarRating(1);
+        }
+
+        private void CheckBox2_Click(object sender, EventArgs e)
+        {
+            SetStarRating(2);
+        }
+
+        private void CheckBox3_Click(object sender, EventArgs e)
+        {
+            SetStarRating(3);
+        }
+
+        private void CheckBox4_Click(object sender, EventArgs e)
+        {
+            SetStarRating(4);
+        }
+
+        private void CheckBox5_Click(object sender, EventArgs e)
+        {
+            SetStarRating(5);
+        }
+
+        private void Btn_clear_Click(object sender, EventArgs e)
+        {
+            ResetAllFields();      
+        }
+
+        //method to set all fields to default values
+        private void ResetAllFields()
+        {
+            this.errorProvider1.Clear();
+            Txt_isbn.Clear();
+            Txt_name.Clear();
+            DatePicker.Text = null;
+            RadioButton_canada.Checked = true;
+            ComboBox_genre.SelectedItem = "Other";
+            Txt_duration.Clear();
+            Txt_price.Clear();
+            SetStarRating(1);
+            Dgv_movies.ClearSelection();
+            Txt_isbn.Focus();
+        }
+        
+        //method to populate input fields with selected DataGridViewRow
+        private void Dgv_movies_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex >= 0)
+            {
+                this.errorProvider1.Clear();
+                DataGridViewRow row = this.Dgv_movies.Rows[e.RowIndex];
+                Txt_isbn.Text = row.Cells[0].Value.ToString();
+                Txt_name.Text = row.Cells[1].Value.ToString();
+                DatePicker.Text = row.Cells[2].Value.ToString();
+                if (row.Cells[3].Value.ToString().Equals("Canada"))
+                    RadioButton_canada.Checked = true;
+                else
+                    RadioButton_international.Checked = true;
+                ComboBox_genre.SelectedItem = row.Cells[4].Value.ToString();
+                Txt_duration.Text = row.Cells[5].Value.ToString();
+                Txt_price.Text = row.Cells[6].Value.ToString();
+                SetStarRating(Convert.ToInt32(row.Cells[7].Value.ToString()));
+            }
+        }
+
+        private void Btn_submit_Click(object sender, EventArgs e)
+        {
+            if (this.ValidateChildren() == false)
+            {
+                //form has invalid inputs
+                return;
+            }
+            else
+            {
+                try
+                {
+                    cmd = new SqlCommand("INSERT INTO movie " +
+                                            "VALUES (@isbn, @name, @date, @location, @genre, @duration, @price, @rating)", conn);
+                    cmd.Parameters.AddWithValue("isbn", Txt_isbn.Text);
+                    cmd.Parameters.AddWithValue("name", Txt_name.Text);
+                    cmd.Parameters.AddWithValue("date", DatePicker.Value.ToString());
+                    cmd.Parameters.AddWithValue("location", RadioButton_canada.Checked == true ? "Canada" : "International");
+                    cmd.Parameters.AddWithValue("genre", ComboBox_genre.SelectedItem);
+                    cmd.Parameters.AddWithValue("duration", Txt_duration.Text);
+                    cmd.Parameters.AddWithValue("price", Txt_price.Text);
+                    cmd.Parameters.AddWithValue("rating", getStarRating());
+                    conn.Open();
+                    int x = cmd.ExecuteNonQuery();
+                    if (x > 0)
+                        MessageBox.Show("Record inserted successfully");
+                    else
+                        MessageBox.Show("Record NOT inserted, something went wrong");
+
+                    //refresh list
+                    cmd = new SqlCommand("SELECT * FROM movie", conn);
+                    reader = cmd.ExecuteReader();
+                    bindSrc.DataSource = reader;
+                    Dgv_movies.DataSource = bindSrc;
+                }
+                catch (Exception)
+                {
+                    MessageBox.Show("Error: \n\nRecord already exists. ISBN: " + Txt_isbn.Text);
+                }
+                finally
+                {
+                    conn.Close();
+                    reader.Close();
+                }
+            }
+        }
+
+        private void Btn_delete_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                cmd = new SqlCommand("DELETE FROM movie WHERE isbn = @isbn", conn);
+                cmd.Parameters.AddWithValue("isbn", Txt_isbn.Text);
+                conn.Open();
+                int x = cmd.ExecuteNonQuery();
+                if (x > 0)
+                    MessageBox.Show("Record deleted successfully");
+                else
+                    MessageBox.Show("Please enter a valid ISBN number");
+
+                //refresh list
+                cmd = new SqlCommand("SELECT * FROM movie", conn);
+                reader = cmd.ExecuteReader();
+                bindSrc.DataSource = reader;
+                Dgv_movies.DataSource = bindSrc;
+            }
+            catch (Exception)
+            {
+                MessageBox.Show("Record not deleted. Something went wrong.");
+            }
+            finally
+            {
+                conn.Close();
+                reader.Close();
+                ResetAllFields();
+            }
+        }
+
+        private void Btn_update_Click(object sender, EventArgs e)
+        {
+            try
+                {
+                cmd = new SqlCommand("UPDATE movie SET " +
+                    "name = @name ," +
+                    "date = @date ," +
+                    "location = @location ," +
+                    "genre = @genre ," +
+                    "duration = @duration ," +
+                    "price = @price ," +
+                    "rating = @rating " +
+                    "WHERE isbn = @isbn ", conn);               
+                cmd.Parameters.AddWithValue("name", Txt_name.Text);
+                cmd.Parameters.AddWithValue("date", DatePicker.Value.ToString());
+                cmd.Parameters.AddWithValue("location", RadioButton_canada.Checked == true ? "Canada" : "International");
+                cmd.Parameters.AddWithValue("genre", ComboBox_genre.SelectedItem);
+                cmd.Parameters.AddWithValue("duration", Txt_duration.Text);
+                cmd.Parameters.AddWithValue("price", Txt_price.Text);
+                cmd.Parameters.AddWithValue("rating", getStarRating());
+                cmd.Parameters.AddWithValue("isbn", Txt_isbn.Text);
+                conn.Open();
+                int x = cmd.ExecuteNonQuery();
+                if (x > 0)
+                    MessageBox.Show("Record updated successfully");
+
+                //refresh list
+                cmd = new SqlCommand("SELECT * FROM movie", conn);
+                reader = cmd.ExecuteReader();
+                bindSrc.DataSource = reader;
+                Dgv_movies.DataSource = bindSrc;
+            }
+                catch (Exception)
+            {
+                MessageBox.Show("Please enter a valid ISBN number");
+            }
+            finally
+            {
+                conn.Close();
+                reader.Close();
+            }
+        }
+    }
+}

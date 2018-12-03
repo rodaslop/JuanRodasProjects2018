@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app version="3.1" xmlns="http://xmlns.jcp.org/xml/ns/javaee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd">
+    <servlet>
+        <servlet-name>BooksServlet</servlet-name>
+        <servlet-class>books.controller.BooksServlet</servlet-class>
+    </servlet>
+    <servlet>
+        <servlet-name>AuthorsServlet</servlet-name>
+        <servlet-class>books.controller.AuthorsServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>BooksServlet</servlet-name>
+        <url-pattern>/BooksServlet</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>AuthorsServlet</servlet-name>
+        <url-pattern>/AuthorsServlet</url-pattern>
+    </servlet-mapping>
+    <session-config>
+        <session-timeout>
+            30
+        </session-timeout>
+    </session-config>
+    <!-- CONSTRAINT #1-->
+    <security-constraint>
+        <display-name>A-Admin Constraint</display-name>
+        <web-resource-collection>
+            <web-resource-name>Author Administration</web-resource-name>
+            <url-pattern>/users/authors/*</url-pattern>
+        </web-resource-collection>
+        <auth-constraint>
+            <role-name>A-Admin</role-name>
+            <role-name>DB-User</role-name>
+        </auth-constraint>
+        <user-data-constraint>
+            <transport-guarantee>CONFIDENTIAL</transport-guarantee>
+        </user-data-constraint>
+    </security-constraint>
+    <!-- CONSTRAINT #2-->
+    <security-constraint>
+        <display-name>B-Admin Constraint</display-name>
+        <web-resource-collection>
+            <web-resource-name>Book Administration</web-resource-name>
+            <url-pattern>/users/books/*</url-pattern>
+        </web-resource-collection>
+        <auth-constraint>
+            <role-name>B-Admin</role-name>
+            <role-name>DB-User</role-name>
+        </auth-constraint>
+        <user-data-constraint>
+            <transport-guarantee>CONFIDENTIAL</transport-guarantee>
+        </user-data-constraint>
+    </security-constraint>
+    <!-- LOGIN CONFIG -->
+    <login-config>
+        <auth-method>FORM</auth-method>
+        <realm-name>file</realm-name>
+        <form-login-config>
+            <form-login-page>/login.jsp</form-login-page>
+            <form-error-page>/login_error.jsp</form-error-page>
+        </form-login-config>
+    </login-config>
+    <!-- SECURTY ROLES -->
+    <security-role>
+        <role-name>A-Admin</role-name>
+    </security-role>
+    <security-role>
+        <role-name>B-Admin</role-name>
+    </security-role>
+    <security-role>
+        <role-name>DB-User</role-name>
+    </security-role>
+</web-app>
